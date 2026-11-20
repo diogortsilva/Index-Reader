@@ -5,6 +5,8 @@
 output/
 out/
 *_output/
+# One folder per run, each holding a copy of the input workbook
+Projects/
 
 # Python
 __pycache__/
