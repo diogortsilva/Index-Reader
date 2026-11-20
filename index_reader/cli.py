@@ -49,7 +49,13 @@ def main(argv=None):
     parser.add_argument("-o", "--output", help="write the outputs straight into this folder "
                         "instead of a new folder under Projects")
     parser.add_argument("--version", action="version", version="Index-Reader " + config.VERSION)
+    parser.add_argument("--self-test", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+
+    if args.self_test:
+        # build check: open the real window, run the workbook through it, close
+        from .gui import self_test
+        return self_test(args.index)
 
     if not args.index:
         from .gui import main as gui_main

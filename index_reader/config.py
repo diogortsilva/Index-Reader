@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from .sample_headers import SAMPLE_HEADERS
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 # --------------------------------------------------------------------------
 # Cable sizing rules

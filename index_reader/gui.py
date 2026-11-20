@@ -317,6 +317,36 @@ The command line still works:   python -m index_reader "INDEX.xlsx"
 """
 
 
+def self_test(path=None, base_dir=None, timeout=120.0):
+    """Open the real window, optionally run one workbook through it, and close.
+
+    Used by the automated build to prove that the window works on the machine
+    (and inside the packaged executable). Returns 0 when everything worked,
+    3 when no window could be opened, 4 when the run did not complete.
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog, messagebox, ttk
+        from tkinter import font as tkfont
+        root = tk.Tk()
+    except Exception:
+        return 3
+    app = App(root, tk, ttk, filedialog, messagebox, tkfont, Session(base_dir=base_dir))
+    root.update()
+    code = 0
+    if path:
+        app.load(path)
+        deadline = time.time() + timeout
+        while app.session.state != "done" and time.time() < deadline:
+            root.update()
+            time.sleep(0.02)
+        root.update()
+        output = app.session.output
+        code = 0 if (output is not None and output.ok) else 4
+    root.destroy()
+    return code
+
+
 def main():
     try:
         import tkinter as tk

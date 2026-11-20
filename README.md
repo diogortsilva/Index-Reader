@@ -15,7 +15,20 @@ Everything runs locally. There is no network code and no AI engine in this packa
 input always produces byte-identical output files (only the folder name and `run_log.txt`
 carry the date and time of the run).
 
-## Start
+## Windows program (no Python needed)
+
+Download `Index-Reader-vX.Y.Z-windows.zip` from the
+[Releases page](https://github.com/diogortsilva/Index-Reader/releases), extract it, and
+double-click `Index-Reader.exe` inside the extracted folder. Nothing else has to be installed
+and no internet connection is used. Results go to a `Projects` folder next to the `.exe`.
+
+The program is not code-signed: the first time, Windows may show "Windows protected your PC".
+Click **More info**, then **Run anyway**.
+
+Each release is built by `.github/workflows/windows-release.yml` from the source in this
+repository, after the tests pass on Windows.
+
+## Start from source
 
 Double-click the launcher in this folder:
 
@@ -128,10 +141,10 @@ To adopt a new reference layout: `python tools/make_sample_headers.py REFERENCE.
 
 ## Versions
 
-Every revision pushed to GitHub gets the next version number and a matching git tag
-(`v0.1.0`, `v0.1.1`, ...). The number is also in `index_reader/config.py` and is printed on
-the block diagram and in the schedule's Run Info sheet. See `CHANGELOG.md`.
+Every revision pushed to GitHub gets the next version number. From v0.3.0 on, the Windows
+build also creates a matching git tag and release. The number is in
+`index_reader/config.py` and is printed on the block diagram and in the schedule's Run Info
+sheet. See `CHANGELOG.md`.
 
 - Third number: fixes and small changes. Second number: new features. First number: 1 at the
   first release packaged for Windows users.
-- Next: a packaged Windows `.exe` so users need no Python at all.

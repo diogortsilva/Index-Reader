@@ -2,6 +2,16 @@
 
 Every revision pushed to GitHub is listed here and tagged with the same number.
 
+## v0.3.0 - 2026-11-20
+
+- Windows program: every pushed revision is built into `Index-Reader.exe` on a GitHub Windows
+  machine and published as a release (`Index-Reader-vX.Y.Z-windows.zip`). It needs no Python,
+  no installation and no internet connection.
+- The build runs all unit tests on Windows, opens the real window, runs a test workbook
+  through the packaged program, and only then publishes.
+- Releases carry the version tag (`v0.3.0`, ...), created by the build.
+- New test that opens the real window where the computer can show one.
+
 ## v0.2.0 - 2026-11-20
 
 - Desktop window: browse and load an index, progress bar with the current step, elapsed

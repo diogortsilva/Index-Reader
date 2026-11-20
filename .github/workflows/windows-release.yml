@@ -1,0 +1,122 @@
+# Builds Index-Reader.exe on a Windows machine provided by GitHub and publishes it
+# as a release named after the version in index_reader/config.py.
+#
+# Only the source code in this repository is used. No project workbook is involved,
+# and the finished program needs no Python and no internet connection.
+
+name: Windows release
+
+on:
+  push:
+    branches:
+      - main
+      - feature/cable-builder-engine
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Get the source code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install openpyxl and the packaging tool
+        run: python -m pip install --disable-pip-version-check -r requirements.txt "pyinstaller>=6,<7"
+
+      - name: Read the version number
+        id: version
+        run: |
+          $version = python -c "from index_reader.config import VERSION; print(VERSION)"
+          if (-not $version) { throw "Could not read the version number" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+          "zip=Index-Reader-v$version-windows.zip" >> $env:GITHUB_OUTPUT
+          Write-Host "Building Index-Reader $version"
+
+      - name: Run the unit tests (including the real window)
+        timeout-minutes: 10
+        run: python -m unittest discover -s tests -v
+
+      - name: Build Index-Reader.exe
+        run: >
+          pyinstaller --noconfirm --clean --windowed --onedir
+          --name Index-Reader
+          --paths .
+          --hidden-import index_reader.gui
+          packaging/index_reader_app.py
+
+      - name: Test the packaged program
+        timeout-minutes: 10
+        run: |
+          python packaging/make_selftest_workbook.py selftest_index.xlsx
+          $workbook = (Resolve-Path selftest_index.xlsx).Path
+          $exe = (Resolve-Path "dist\Index-Reader\Index-Reader.exe").Path
+
+          # 1. the window opens, runs the workbook, and closes
+          $run = Start-Process -FilePath $exe -ArgumentList "--self-test", $workbook -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "Window self-test failed with exit code $($run.ExitCode)" }
+
+          # 2. the command-line path works too
+          $run = Start-Process -FilePath $exe -ArgumentList $workbook -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "Command-line run failed with exit code $($run.ExitCode)" }
+
+          $projects = "dist\Index-Reader\Projects"
+          $folders = @(Get-ChildItem $projects -Directory)
+          if ($folders.Count -ne 2) { throw "Expected 2 project folders, found $($folders.Count)" }
+          foreach ($folder in $folders) {
+            $names = @(Get-ChildItem $folder.FullName -File | ForEach-Object Name | Sort-Object)
+            Write-Host "$($folder.Name): $($names -join ', ')"
+            if ($names.Count -ne 6) { throw "Expected 6 files in $($folder.Name), found $($names.Count)" }
+            $log = Get-Content (Join-Path $folder.FullName "run_log.txt") -Raw
+            if ($log -notmatch "Result code: IR-000") { throw "Run log does not report IR-000" }
+          }
+
+          # the release must not contain test output
+          Remove-Item $projects -Recurse -Force
+          Remove-Item selftest_index.xlsx
+
+      - name: Assemble the zip
+        run: |
+          Copy-Item packaging\README-Windows.txt dist\Index-Reader\README.txt
+          Copy-Item LICENSE dist\Index-Reader\LICENSE.txt
+          Copy-Item CHANGELOG.md dist\Index-Reader\CHANGELOG.md
+          Compress-Archive -Path dist\Index-Reader -DestinationPath "${{ steps.version.outputs.zip }}"
+          Get-Item "${{ steps.version.outputs.zip }}" | Format-List Name, Length
+          (Get-FileHash "${{ steps.version.outputs.zip }}" -Algorithm SHA256).Hash
+
+      - name: Keep the zip with this build
+        uses: actions/upload-artifact@v7
+        with:
+          name: Index-Reader-v${{ steps.version.outputs.version }}-windows
+          path: ${{ steps.version.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $zip = "${{ steps.version.outputs.zip }}"
+          (Get-Content packaging/RELEASE-NOTES.md -Raw).Replace("vX.Y.Z", $tag) | Set-Content release-notes.md
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag exists; replacing its zip"
+            gh release upload $tag $zip --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            Write-Host "Creating release $tag"
+            gh release create $tag $zip --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Index-Reader $tag" --notes-file release-notes.md
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the release failed" }
