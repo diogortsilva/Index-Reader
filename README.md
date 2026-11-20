@@ -53,6 +53,9 @@ All rules live in `index_reader/config.py`.
 - **Blank cable ID to the end device:** `newcable_<instrument tag>`, or `newcable_<end device>`
   when signals share an end device.
 - **Rows used:** rows with an instrument tag whose I/O type is not `SPARE` or `DELETED`.
+- **Tabs used:** only the main tab (`LOOP`, or the tab whose headers match the reference
+  layout if it was renamed). All other tabs are ignored and copied unchanged to the updated
+  index.
 
 ## Header check
 
@@ -72,7 +75,12 @@ To adopt a new reference layout: `python tools/make_sample_headers.py REFERENCE.
 `PAIR_NUMBER_ABOVE_SIZE`, `PLC_MISMATCH`, `NO_IO_ADDRESS`, `DUPLICATE_IO_ADDRESS`,
 `DUPLICATE_TAG`, `SECTION_WITHOUT_TAG`, `NO_TERMINAL_STRIP`, `CABLE_AFTER_END`.
 
-## Status
+## Versions
 
-- v0.1.0: engine and command line.
+Every revision pushed to GitHub gets the next version number and a matching git tag
+(`v0.1.0`, `v0.1.1`, ...). The number is also in `index_reader/config.py` and is printed on
+the block diagram and in the schedule's Run Info sheet. See `CHANGELOG.md`.
+
+- Third number: fixes and small changes. Second number: new features. First number: 1 at the
+  first release packaged for Windows users.
 - Next: desktop window (file picker, run, results) and a packaged Windows `.exe`.

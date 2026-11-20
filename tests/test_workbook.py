@@ -92,6 +92,59 @@ class HeaderCheck(Folder):
                          ["jb1_cable"])
 
 
+class MainTabOnly(Folder):
+    """Other tabs change from project to project and are never read."""
+
+    MISLEADING = {
+        "MCC": [["Motor/Load TAG", "MCC", "Cubicle"], ["ZSO-1", "MCC-99", "9Z"]],
+        "MOV": [["VALVE TAG#", "OPEN Command"], ["MOV-1", "WRONG-TAG"]],
+        "Junction Boxes": [["Junction Boxes", "Terminal Strip"], ["JB-77", "TB-9"]],
+        "IO COUNT": [["AI", "#DIV/0!"], ["#N/A", None]],
+        "Sheet1": [["INST_TAG", "M1CABLE", "CABLE1"], ["FAKE-1", "FAKE-CABLE", "FAKE-CABLE-2"]],
+    }
+
+    def summary(self, result):
+        return ([(s.row, s.tag, [(g.cable_id, g.src, g.dst, g.kind) for g in s.segments])
+                 for s in result.signals],
+                sorted(result.nodes),
+                sorted(result.new_cells.items()),
+                [(f.code, f.row) for f in result.findings])
+
+    def test_extra_tabs_do_not_change_the_result(self):
+        plain = loader.load_index(make_workbook(self.path("a.xlsx"), ROWS))
+        busy = loader.load_index(make_workbook(self.path("b.xlsx"), ROWS,
+                                               extra_sheets=self.MISLEADING))
+        self.assertEqual(busy.sheet, "LOOP")
+        self.assertEqual(self.summary(graph.build_graph(plain)),
+                         self.summary(graph.build_graph(busy)))
+
+    def test_extra_tabs_are_carried_over_untouched(self):
+        source = make_workbook(self.path("index.xlsx"), ROWS, extra_sheets=self.MISLEADING)
+        out = run(source, self.path("out"))
+        with zipfile.ZipFile(source) as a, zipfile.ZipFile(out.files["index"]) as b:
+            changed = [n for n in a.namelist() if a.read(n) != b.read(n)]
+        self.assertEqual(sorted(changed), ["xl/styles.xml", "xl/worksheets/sheet1.xml"])
+
+    def test_main_tab_is_found_by_its_headers_when_renamed(self):
+        source = make_workbook(self.path("index.xlsx"), ROWS, sheet_name="INDEX REV 3",
+                               extra_sheets=self.MISLEADING)
+        out = run(source, self.path("out"))
+        self.assertEqual(out.data.sheet, "INDEX REV 3")
+        self.assertEqual(len(out.result.signals), len(ROWS))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            book = openpyxl.load_workbook(out.files["index"])
+        self.assertEqual(book["INDEX REV 3"]["DX3"].value, "newcable_MOV-1")
+
+    def test_workbook_without_a_main_tab_is_refused(self):
+        workbook = openpyxl.Workbook()
+        workbook.active.title = "MCC"
+        workbook.active.append(["Motor/Load TAG", "MCC", "Cubicle"])
+        workbook.save(self.path("x.xlsx"))
+        with self.assertRaises(loader.HeaderError):
+            loader.load_index(self.path("x.xlsx"))
+
+
 class UpdatedIndex(Folder):
     def test_only_the_proposed_cells_change(self):
         source = make_workbook(self.path("a.xlsx"), ROWS)

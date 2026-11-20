@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from .sample_headers import SAMPLE_HEADERS
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 # --------------------------------------------------------------------------
 # Cable sizing rules
@@ -23,6 +23,9 @@ EXISTING_KEYWORD = "EXISTING"           # cable IDs containing this are never si
 NEW_CABLE_PREFIX = "newcable_"
 NEW_CABLE_DIGITS = 4                    # newcable_0001
 DEFAULT_END_LOCATION = "FIELD"
+# Only the main tab is ever read. It is the tab with this name or, when no tab
+# has it, the tab whose header row matches the reference layout. Every other tab
+# is ignored (they differ between projects) and copied unchanged to the output.
 SHEET_NAME = "LOOP"
 
 # Cell text treated as "blank"
