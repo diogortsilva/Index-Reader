@@ -1,0 +1,19 @@
+# Never commit project workbooks or generated outputs
+*.xlsx
+*.xlsm
+*.xls
+output/
+out/
+*_output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+*.spec
+*.egg-info/
+.DS_Store
